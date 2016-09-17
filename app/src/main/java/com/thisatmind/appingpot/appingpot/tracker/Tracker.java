@@ -18,9 +18,9 @@ import java.util.List;
  * Created by Patrick on 2016-09-17.
  */
 public class Tracker {
-    public static final SimpleDateFormat dateFormat = new SimpleDateFormat("M-d-yyyy HH:mm:ss");
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("M-d-yyyy HH:mm:ss");
 
-    public static final String TAG = Tracker.class.getSimpleName();
+    public final String TAG = Tracker.class.getSimpleName();
 
     public List<ApplicationInfo> getInstalledAppList(Activity activity){
 
@@ -42,7 +42,7 @@ public class Tracker {
         return packages;
     }
 
-    public static UsageEvents getUsageEvents(Context context){
+    public UsageEvents getUsageEvents(Context context){
         UsageStatsManager usm = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
 
         Calendar calendar = Calendar.getInstance();
@@ -58,14 +58,14 @@ public class Tracker {
 
     }
 
-    public static List<UsageStats> getUsageStatsList(Context context){
+    public List<UsageStats> getUsageStatsList(Context context){
         UsageStatsManager usm = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
         List<UsageStats> usageStatsList = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY,
                 0, System.currentTimeMillis());
         return usageStatsList;
     }
 
-    public static void printfUsageStats(List<UsageStats> usageStatsList){
+    public void printfUsageStats(List<UsageStats> usageStatsList){
         for( UsageStats u : usageStatsList ){
             Log.d(TAG, "pkg : " + u.getPackageName() + " / " + "ForegroundTime : "
                 + dateFormat.format(u.getTotalTimeInForeground()));
@@ -80,7 +80,7 @@ public class Tracker {
 
         UsageEvents.Event e = new UsageEvents.Event();
 
-        HashMap<ForegroundEvent,Integer> map = new HashMap<>();
+        HashMap<ForegroundEvent, Integer> map = new HashMap<>();
 
         boolean isNew = false;
 
@@ -94,10 +94,8 @@ public class Tracker {
             if(!isNew && e.getTimeStamp() >= startPoint){
                 isNew = true;
             }
-            if(e != null){
-                Log.d("TEST", "pkg : " + e.getPackageName() + " " + e.getEventType()+"time : " + e.getTimeStamp());
-            }
-            if(e != null && isNew){
+
+            if(isNew){
                 if(e.getEventType() == UsageEvents.Event.MOVE_TO_FOREGROUND
                         && !prevEvent.equals(e.getPackageName())){
                     curE = new ForegroundEvent(e);
@@ -105,16 +103,70 @@ public class Tracker {
                     if(count == null){
                         map.put(curE,1);
                     }else{
-                        map.put(curE, count.intValue() + 1);
+                        map.put(curE, count + 1);
                     }
                     prevEvent = e.getPackageName();
                 }
             }
         }
+        // test code
+        for(ForegroundEvent key : map.keySet()){
+            Log.d("output", key.getPackageName() + " / count : " + map.get(key));
+        }
+
         return map;
     }
 
-    public static long getCleanMillisecond(long millisecond){
+    public HashMap<ForegroundEvent,Long> calcUsage(UsageEvents uEvents, long startPoint){
+
+        UsageEvents.Event e = new UsageEvents.Event();
+
+        HashMap<ForegroundEvent, Long> map = new HashMap<>();
+
+        boolean isNew = false;
+
+        ForegroundEvent curE;
+
+        long prevTime = 0;
+
+        while(uEvents.hasNextEvent()){
+            uEvents.getNextEvent(e);
+
+            if(!isNew && e.getTimeStamp() >= startPoint &&
+                    e.getEventType() == UsageEvents.Event.MOVE_TO_FOREGROUND){
+                isNew = true;
+            }
+
+            if(isNew){
+                if(e.getEventType() == UsageEvents.Event.MOVE_TO_FOREGROUND){
+                    prevTime = e.getTimeStamp();
+                }else if(e.getEventType() == UsageEvents.Event.MOVE_TO_BACKGROUND){
+                    curE = new ForegroundEvent(e);
+                    Long usage = map.get(curE);
+                    if (usage == null) {
+                        map.put(curE, e.getTimeStamp() - prevTime);
+                    } else {
+                        map.put(curE, usage + e.getTimeStamp() - prevTime);
+                    }
+                    prevTime = e.getTimeStamp();
+                }
+            }
+        }
+        // test code
+        for(ForegroundEvent key : map.keySet()){
+            Log.d("output", key.getPackageName() + " / usage : " + dateFormat.format(map.get(key)));
+        }
+
+        ForegroundEvent startObject = new ForegroundEvent();
+        startObject.setPackageName("startPoint");
+        startObject.setDate(prevTime);
+        map.put(startObject,prevTime);
+
+        return map;
+    }
+
+
+    private long getCleanMillisecond(long millisecond){
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(millisecond);
         cal.set(Calendar.HOUR_OF_DAY,0);
@@ -127,7 +179,7 @@ public class Tracker {
     // @TODO
     // should update better algorithm
     // there is a problem with locale to compare with long
-    public static boolean isSameDay(long date1, long date2) {
+    private boolean isSameDay(long date1, long date2) {
 
         // If they now are equal then it is the same day.
         Calendar cal1 = Calendar.getInstance();
@@ -136,8 +188,9 @@ public class Tracker {
         cal1.setTimeInMillis(date1);
         cal2.setTimeInMillis(date2);
 
-        return cal1.DATE == cal2.DATE && cal1.MONTH == cal2.MONTH
-                && cal1.YEAR == cal2.YEAR ? true : false;
+        return cal1.get(Calendar.DATE) == cal2.get(Calendar.DATE) &&
+                cal1.get(Calendar.MONTH) == cal2.get(Calendar.MONTH) &&
+                  cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR);
     }
 
     private class ForegroundEvent{
@@ -149,7 +202,7 @@ public class Tracker {
 
         public ForegroundEvent(UsageEvents.Event e){
             this.packageName = e.getPackageName();
-            this.date = e.getTimeStamp();
+            this.date = getCleanMillisecond(e.getTimeStamp());
         };
 
         public String getPackageName() {
@@ -171,7 +224,7 @@ public class Tracker {
         @Override
         public int hashCode() {
             int result = packageName.hashCode();
-            result = 31 * result + (int) (getCleanMillisecond(date));
+            result = 31 * result + (int)date;
             return result;
         }
 
@@ -186,7 +239,6 @@ public class Tracker {
                         isSameDay(e.getDate(), this.date)){
                     return true;
                 }
-                Log.d("WOW","here");
                 return false;
             }
             return false;

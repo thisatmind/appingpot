@@ -22,8 +22,9 @@ public class MainActivity extends AppCompatActivity {
 
 //        Tracker.getUsageEvents(this);
 //        Tracker.printfUsageStats(Tracker.getUsageStatsList(this));
-          new Tracker().calcEvent(Tracker.getUsageEvents(this), 0);
+//        new Tracker().calcEvent(Tracker.getUsageEvents(this), 0);
 
+        new Tracker().calcUsage(Tracker.getUsageEvents(this), 0);
     }
 
 
