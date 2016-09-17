@@ -1,8 +1,6 @@
 package com.thisatmind.appingpot.appingpot;
 
-import android.Manifest;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -20,9 +18,15 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
             startActivity(intent);
         }
-        Tracker.getUsageEvents(this);
+
+
+//        Tracker.getUsageEvents(this);
 //        Tracker.printfUsageStats(Tracker.getUsageStatsList(this));
+          new Tracker().calcEvent(Tracker.getUsageEvents(this), 0);
 
     }
+
+
+
 
 }
