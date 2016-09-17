@@ -5,14 +5,22 @@ import android.app.usage.UsageEvents;
 import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.util.Log;
 
+import com.thisatmind.appingpot.appingpot.models.Event;
+
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+
+import io.realm.Realm;
+import io.realm.RealmQuery;
+import io.realm.RealmResults;
 
 /**
  * Created by Patrick on 2016-09-17.
@@ -43,7 +51,7 @@ public class Tracker {
     }
 
     public UsageEvents getUsageEvents(Context context){
-        UsageStatsManager usm = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
+        UsageStatsManager usm = (UsageStatsManager) context.getSystemService("usagestats");
 
         Calendar calendar = Calendar.getInstance();
         long endTime = calendar.getTimeInMillis();
@@ -53,16 +61,13 @@ public class Tracker {
         Log.d(TAG, "Range start : " + dateFormat.format(startTime));
         Log.d(TAG, "Range end : " + dateFormat.format(endTime));
 
-        UsageEvents uEvents = usm.queryEvents(startTime, endTime);
-        return uEvents;
-
+        return usm.queryEvents(startTime, endTime);
     }
 
     public List<UsageStats> getUsageStatsList(Context context){
-        UsageStatsManager usm = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
-        List<UsageStats> usageStatsList = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY,
+        UsageStatsManager usm = (UsageStatsManager) context.getSystemService("usagestats");
+        return usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY,
                 0, System.currentTimeMillis());
-        return usageStatsList;
     }
 
     public void printfUsageStats(List<UsageStats> usageStatsList){
@@ -76,7 +81,7 @@ public class Tracker {
         }
     }
 
-    public HashMap<ForegroundEvent,Integer> calcEvent(UsageEvents uEvents, long startPoint){
+    public HashMap<ForegroundEvent, Integer> calcEventPerHour(UsageEvents uEvents, long startPoint){
 
         UsageEvents.Event e = new UsageEvents.Event();
 
@@ -111,13 +116,13 @@ public class Tracker {
         }
         // test code
         for(ForegroundEvent key : map.keySet()){
-            Log.d("output", key.getPackageName() + " / count : " + map.get(key));
+            Log.d("output", key.getPackageName() + " date : " + dateFormat.format(key.getDate()) + " count : " + map.get(key));
         }
 
         return map;
     }
 
-    public HashMap<ForegroundEvent,Long> calcUsage(UsageEvents uEvents, long startPoint){
+    public HashMap<ForegroundEvent,Long> calcUsagePerHour(UsageEvents uEvents, long startPoint){
 
         UsageEvents.Event e = new UsageEvents.Event();
 
@@ -152,10 +157,10 @@ public class Tracker {
                 }
             }
         }
-        // test code
-        for(ForegroundEvent key : map.keySet()){
-            Log.d("output", key.getPackageName() + " / usage : " + dateFormat.format(map.get(key)));
-        }
+//        // test code
+//        for(ForegroundEvent key : map.keySet()){
+//            Log.d("output", key.getPackageName() + " / usage : " + dateFormat.format(map.get(key)));
+//        }
 
         ForegroundEvent startObject = new ForegroundEvent();
         startObject.setPackageName("startPoint");
@@ -165,11 +170,9 @@ public class Tracker {
         return map;
     }
 
-
     private long getCleanMillisecond(long millisecond){
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(millisecond);
-        cal.set(Calendar.HOUR_OF_DAY,0);
         cal.set(Calendar.MINUTE,0);
         cal.set(Calendar.SECOND,0);
         cal.set(Calendar.MILLISECOND,0);
@@ -179,7 +182,7 @@ public class Tracker {
     // @TODO
     // should update better algorithm
     // there is a problem with locale to compare with long
-    private boolean isSameDay(long date1, long date2) {
+    private boolean isSameDate(long date1, long date2) {
 
         // If they now are equal then it is the same day.
         Calendar cal1 = Calendar.getInstance();
@@ -188,12 +191,13 @@ public class Tracker {
         cal1.setTimeInMillis(date1);
         cal2.setTimeInMillis(date2);
 
-        return cal1.get(Calendar.DATE) == cal2.get(Calendar.DATE) &&
-                cal1.get(Calendar.MONTH) == cal2.get(Calendar.MONTH) &&
-                  cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR);
+        return cal1.get(Calendar.HOUR_OF_DAY) == cal2.get(Calendar.HOUR_OF_DAY)
+                && cal1.get(Calendar.DATE) == cal2.get(Calendar.DATE)
+                && cal1.get(Calendar.MONTH) == cal2.get(Calendar.MONTH)
+                && cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR);
     }
 
-    private class ForegroundEvent{
+    public class ForegroundEvent{
 
         private String packageName;
         private long date;
@@ -235,14 +239,24 @@ public class Tracker {
 
                 ForegroundEvent e = (ForegroundEvent)obj;
 
-                if(e.getPackageName().equals(this.packageName) &&
-                        isSameDay(e.getDate(), this.date)){
-                    return true;
-                }
-                return false;
+                return e.getPackageName().equals(this.packageName)
+                        && isSameDate(e.getDate(), this.date);
             }
+
             return false;
         }
+    }
 
+    public long getStartPoint(Context context){
+        return context.getSharedPreferences("Tracker", Context.MODE_PRIVATE)
+                .getLong("startPoint", 0);
+    }
+
+    public void setStartPoint(Context context, long startPoint){
+        SharedPreferences sharedPreference
+                = context.getSharedPreferences("Tracker", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreference.edit();
+        editor.putLong("startPoint", startPoint);
+        editor.apply();
     }
 }

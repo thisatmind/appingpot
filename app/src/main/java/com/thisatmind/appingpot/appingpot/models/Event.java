@@ -14,7 +14,7 @@ public class Event extends RealmObject{
     @PrimaryKey
     @Required
     private String packageName;
-    private Date date;
+    private long date;
 
     private int count;
 
@@ -26,11 +26,11 @@ public class Event extends RealmObject{
         this.packageName = pacakageName;
     }
 
-    public Date getDate() {
+    public long getDate() {
         return date;
     }
 
-    public void setDate(Date date) {
+    public void setDate(long date) {
         this.date = date;
     }
 
