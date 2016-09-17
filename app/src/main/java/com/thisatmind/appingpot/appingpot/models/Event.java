@@ -13,17 +13,17 @@ public class Event extends RealmObject{
 
     @PrimaryKey
     @Required
-    private String pacakageName;
+    private String packageName;
     private Date date;
 
     private int count;
 
     public String getPacakageName() {
-        return pacakageName;
+        return packageName;
     }
 
     public void setPacakageName(String pacakageName) {
-        this.pacakageName = pacakageName;
+        this.packageName = pacakageName;
     }
 
     public Date getDate() {
