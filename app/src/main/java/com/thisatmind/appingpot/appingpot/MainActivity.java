@@ -1,11 +1,12 @@
 package com.thisatmind.appingpot.appingpot;
 
 
+import android.app.usage.UsageEvents;
+import android.content.Intent;
 import android.databinding.DataBindingUtil;
-
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
+import android.provider.Settings;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 
@@ -13,9 +14,9 @@ import com.thisatmind.appingpot.appingpot.databinding.ActivityMainBinding;
 import com.thisatmind.appingpot.appingpot.models.Event;
 import com.thisatmind.appingpot.appingpot.pojo.AppCount;
 import com.thisatmind.appingpot.appingpot.tracker.Tracker;
+import com.thisatmind.appingpot.appingpot.tracker.TrackerDAO;
 
 import java.util.Calendar;
-import java.util.HashMap;
 
 import io.realm.Realm;
 import io.realm.RealmConfiguration;
@@ -29,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
     private Realm realm;
     public ActivityMainBinding binding;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -36,6 +38,8 @@ public class MainActivity extends AppCompatActivity {
 
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
         this.realm = initRealm();
+
+        getGrant();
 
         Button btn = (Button) findViewById(R.id.saveBtn);
         btn.setOnClickListener(new View.OnClickListener() {
@@ -46,6 +50,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // testcode
+//        new Tracker().calcEventPerHour(new Tracker().getUsageEvents(this),0);
+//        new Tracker().calcUsagePerHour(new Tracker().getUsageEvents(this),0);
 //        new Tracker().calcEventPerHour(new Tracker().getUsageEvents(this), 0);
     }
 
@@ -53,11 +60,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        AppCount initData = initAppCount();
-        if(initData == null) {
-            initData = new AppCount("defaultPacakgeName", 0);
-        }
-        binding.setAppCount(initData);
+//        AppCount initData = initAppCount();
+//        if(initData == null) {
+//            initData = new AppCount("defaultPacakgeName", 0);
+//        }
+//        binding.setAppCount(initData);
     }
 
     @Override
@@ -92,45 +99,32 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void saveData(){
+        Tracker tracker = new Tracker();
+        TrackerDAO trackerDAO = new TrackerDAO();
+        UsageEvents uEvents = tracker.getUsageEvents(this);
+        UsageEvents uEventsTimer = tracker.getUsageEvents(this);
+
+        trackerDAO.saveEventPerHour(tracker.calcEventPerHour(uEvents,
+                tracker.getEventStartPoint(this)), this.realm);
+        long timer = tracker.calcEventStartPoint(uEventsTimer);
+        tracker.setEventStartPoint(this, timer);
+
         realm.executeTransaction(new Realm.Transaction() {
             @Override
             public void execute(Realm realm) {
-                try{
-                    Tracker tracker = new Tracker();
-                    HashMap<Tracker.ForegroundEvent, Integer> eventMap =
-                            tracker.calcEventPerHour(tracker.getUsageEvents(MainActivity.this),
-                                tracker.getStartPoint(MainActivity.this));
-
-                    for(Tracker.ForegroundEvent e : eventMap.keySet()){
-
-                        RealmQuery<Event> query = realm.where(Event.class);
-                        query.equalTo("packageName", e.getPackageName())
-                                .equalTo("date", e.getDate());
-                        RealmResults<Event> result = query.findAll();
-
-                        Event event;
-                        if(result.size() == 0){
-                            event = realm.createObject(Event.class);
-                            event.setPacakageName(e.getPackageName());
-                            event.setDate(e.getDate());
-                            event.setCount(eventMap.get(e));
-                        }else{
-                            event = result.get(0);
-                            event.setCount(event.getCount() + eventMap.get(e));
-                        }
-                    }
-
-//                    HashMap<Tracker.ForegroundEvent, Long> usageMap =
-//                            tracker.calcUsagePerHour(tracker.getUsageEvents(MainActivity.this),
-//                                tracker.getStartPoint(MainActivity.this));
-
-
-
-                }catch(Exception e){
-                    Log.d("TEST", "exception here :");
-                }
+                RealmQuery<Event> query = realm.where(Event.class);
+                RealmResults<Event> results = query.findAll();
+//                for(Event result : results){
+//                    Log.d("TEST", result.getPacakageName() + " time : " + new Date(result.getDate()).toString()
+//                        + " count : " + result.getCount());
+//                }
             }
         });
+
     }
 
+    private void getGrant(){
+        Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+        startActivity(intent);
+    }
 }

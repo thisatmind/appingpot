@@ -26,6 +26,7 @@ import io.realm.RealmResults;
  * Created by Patrick on 2016-09-17.
  */
 public class Tracker {
+
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("M-d-yyyy HH:mm:ss");
 
     public final String TAG = Tracker.class.getSimpleName();
@@ -96,7 +97,7 @@ public class Tracker {
         while(uEvents.hasNextEvent()){
             uEvents.getNextEvent(e);
 
-            if(!isNew && e.getTimeStamp() >= startPoint){
+            if(!isNew && e.getTimeStamp() > startPoint){
                 isNew = true;
             }
 
@@ -114,10 +115,10 @@ public class Tracker {
                 }
             }
         }
-        // test code
-        for(ForegroundEvent key : map.keySet()){
-            Log.d("output", key.getPackageName() + " date : " + dateFormat.format(key.getDate()) + " count : " + map.get(key));
-        }
+//        // test code
+//        for(ForegroundEvent key : map.keySet()){
+//            Log.d("output", key.getPackageName() + " date : " + dateFormat.format(key.getDate()) + " count : " + map.get(key));
+//        }
 
         return map;
     }
@@ -137,8 +138,7 @@ public class Tracker {
         while(uEvents.hasNextEvent()){
             uEvents.getNextEvent(e);
 
-            if(!isNew && e.getTimeStamp() >= startPoint &&
-                    e.getEventType() == UsageEvents.Event.MOVE_TO_FOREGROUND){
+            if(!isNew && e.getTimeStamp() > startPoint){
                 isNew = true;
             }
 
@@ -157,10 +157,11 @@ public class Tracker {
                 }
             }
         }
-//        // test code
-//        for(ForegroundEvent key : map.keySet()){
-//            Log.d("output", key.getPackageName() + " / usage : " + dateFormat.format(map.get(key)));
-//        }
+        // test code
+        for(ForegroundEvent key : map.keySet()){
+            Log.d("output", key.getPackageName() + "time : "+dateFormat.format(key.getDate())
+                    +" / usage : " + dateFormat.format(map.get(key)));
+        }
 
         ForegroundEvent startObject = new ForegroundEvent();
         startObject.setPackageName("startPoint");
@@ -170,7 +171,35 @@ public class Tracker {
         return map;
     }
 
-    private long getCleanMillisecond(long millisecond){
+    public long calcUsageStartPoint(UsageEvents uEvents){
+
+        UsageEvents.Event e = new UsageEvents.Event();
+
+        long prevTime = 0;
+
+        while(uEvents.hasNextEvent()) {
+            uEvents.getNextEvent(e);
+            if (e.getEventType() == UsageEvents.Event.MOVE_TO_BACKGROUND){
+                prevTime = e.getTimeStamp();
+            }
+        }
+
+        return prevTime;
+    }
+
+    public long calcEventStartPoint(UsageEvents uEvents){
+        UsageEvents.Event e = new UsageEvents.Event();
+
+        long prevTime = 0;
+
+        while(uEvents.hasNextEvent()){
+            uEvents.getNextEvent(e);
+            prevTime = e.getTimeStamp();
+        }
+        return prevTime;
+    }
+
+    public static long getCleanMillisecond(long millisecond){
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(millisecond);
         cal.set(Calendar.MINUTE,0);
@@ -247,16 +276,27 @@ public class Tracker {
         }
     }
 
-    public long getStartPoint(Context context){
+    public long getEventStartPoint(Context context){
         return context.getSharedPreferences("Tracker", Context.MODE_PRIVATE)
-                .getLong("startPoint", 0);
+                .getLong("eventStartPoint", 0);
     }
-
-    public void setStartPoint(Context context, long startPoint){
+    public void setEventStartPoint(Context context, long startPoint){
         SharedPreferences sharedPreference
                 = context.getSharedPreferences("Tracker", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreference.edit();
-        editor.putLong("startPoint", startPoint);
+        editor.putLong("eventStartPoint", startPoint);
         editor.apply();
     }
+    public long getUsageStartPoint(Context context){
+        return context.getSharedPreferences("Tracker", Context.MODE_PRIVATE)
+                .getLong("usageStartPoint", 0);
+    }
+    public void setUsageStartPoint(Context context, long startPoint){
+        SharedPreferences sharedPreference
+                = context.getSharedPreferences("Tracker", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreference.edit();
+        editor.putLong("usageStartPoint", startPoint);
+        editor.apply();
+    }
+
 }

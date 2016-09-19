@@ -1,7 +1,5 @@
 package com.thisatmind.appingpot.appingpot.models;
 
-import java.util.Date;
-
 import io.realm.RealmObject;
 import io.realm.annotations.PrimaryKey;
 import io.realm.annotations.Required;
@@ -13,6 +11,7 @@ public class Event extends RealmObject{
 
     @PrimaryKey
     @Required
+    private String key;
     private String packageName;
     private long date;
 
@@ -40,5 +39,13 @@ public class Event extends RealmObject{
 
     public void setCount(int count) {
         this.count = count;
+    }
+
+    public String getKey() { return key; }
+
+    public void setKey(String key) { this.key = key; }
+
+    public String genKey(String packageName, long date){
+        return packageName + date;
     }
 }
