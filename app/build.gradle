@@ -26,5 +26,8 @@ dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:24.2.1'
+    compile group: 'com.google.code.gson', name: 'gson', version: '2.5'
     apply plugin: 'realm-android'
+    compile 'com.squareup.retrofit2:retrofit:2.1.0'
+    compile group: 'com.squareup.retrofit2', name: 'converter-gson', version: '2.0.0-beta4'
 }

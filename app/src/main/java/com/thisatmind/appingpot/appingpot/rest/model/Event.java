@@ -1,18 +1,16 @@
-package com.thisatmind.appingpot.appingpot.models;
-
-import io.realm.RealmObject;
-import io.realm.annotations.PrimaryKey;
-import io.realm.annotations.Required;
+package com.thisatmind.appingpot.appingpot.rest.model;
 
 /**
- * Created by Patrick on 2016-09-17.
+ * Created by patrick on 2016-10-02.
  */
-public class Event extends RealmObject{
 
-    @PrimaryKey
-    @Required
+public class Event {
+
+
     private String key;
+
     private String packageName;
+
     private long date;
 
     private int count;
@@ -24,12 +22,6 @@ public class Event extends RealmObject{
         this.packageName = packageName;
         this.date = date;
         this.count = count;
-    }
-
-    public com.thisatmind.appingpot.appingpot.rest.model.Event getPojo(){
-        return new com.thisatmind.appingpot.appingpot.rest.model.Event(
-                this.key,this.packageName,this.date,this.count
-        );
     }
 
     public String getPackageName() {
